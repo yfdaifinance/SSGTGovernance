@@ -1,16 +1,4 @@
 {
-  "roles": [
-    {
-      "name": "Increment the counter",
-      "id": "INCREMENT_ROLE",
-      "params": []
-    },
-    {
-      "name": "Decrement the counter",
-      "id": "DECREMENT_ROLE",
-      "params": []
-    }
-  ],
   "environments": {
     "default": {
       "appName": "app.aragonpm.eth",
