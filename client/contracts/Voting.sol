@@ -11,7 +11,6 @@ import "@aragon/os/contracts/common/IForwarder.sol";
 import "@aragon/os/contracts/lib/math/SafeMath64.sol";
 import "@aragon/os/contracts/lib/math/SafeMath.sol";
 
-// import "https://github.com/aragon/minime/blob/master/contracts/MiniMeToken.sol";
 
 interface IERC721{
     event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
@@ -98,7 +97,6 @@ contract Voting is IForwarder, AragonApp {
         mapping (address => VoterState) voters;
     }
 
-    // MiniMeToken public token;
     IERC721 public NFT;
     uint64 public supportRequiredPct;
     uint64 public minAcceptQuorumPct;
@@ -332,8 +330,6 @@ contract Voting is IForwarder, AragonApp {
     */
     function _newVote(bytes _executionScript, string _metadata, bool _castVote, bool _executesIfDecided) internal returns (uint256 voteId) {
         uint64 snapshotBlock = getBlockNumber64() - 1; // avoid double voting in this very block
-        uint256 votingPower = 1000;   //token.totalSupplyAt(snapshotBlock);
-        require(votingPower > 0, ERROR_NO_VOTING_POWER);
 
         voteId = votesLength++;
 
@@ -342,7 +338,6 @@ contract Voting is IForwarder, AragonApp {
         vote_.snapshotBlock = snapshotBlock;
         vote_.supportRequiredPct = supportRequiredPct;
         vote_.minAcceptQuorumPct = minAcceptQuorumPct;
-        vote_.votingPower = votingPower;
         vote_.executionScript = _executionScript;
 
         emit StartVote(voteId, msg.sender, _metadata);
