@@ -360,6 +360,7 @@ contract Voting is IForwarder, AragonApp {
     */
     function _vote(uint256 _voteId, uint256 _tokenId, bool _supports, address _voter, bool _executesIfDecided) internal {
         Vote storage vote_ = votes[_voteId];
+        require(NFT.ownerOf(_tokenId) == _voter, "Not Authorized");
         require(!hasVoted[_tokenId], "Already voted");
         // This could re-enter, though we can assume the governance token is not malicious
         uint256 voterStake = 1;
