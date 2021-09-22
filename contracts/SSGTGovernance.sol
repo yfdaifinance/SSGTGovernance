@@ -58,6 +58,7 @@ interface IERC721{
 
     // function safeTransferFrom(address from, address to, uint256 tokenId, bytes calldata data) external;
 }
+
 // import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC721/IERC721.sol";
 
 
@@ -104,6 +105,7 @@ contract Voting is IForwarder, AragonApp {
 
     // We are mimicing an array, we use a mapping instead to make app upgrade more graceful
     mapping (uint256 => Vote) internal votes;
+    mapping (uint256 => bool) public hasVoted;
     uint256 public votesLength;
 
     event StartVote(uint256 indexed voteId, address indexed creator, string metadata);
@@ -171,8 +173,8 @@ contract Voting is IForwarder, AragonApp {
     * @param _metadata Vote metadata
     * @return voteId Id for newly created vote
     */
-    function newVote(bytes _executionScript, string _metadata) external auth(CREATE_VOTES_ROLE) returns (uint256 voteId) {
-        return _newVote(_executionScript, _metadata, true, true);
+    function newVote(bytes _executionScript, string _metadata, uint256 _tokenId) external auth(CREATE_VOTES_ROLE) returns (uint256 voteId) {
+        return _newVote(_executionScript, _metadata, true, true, _tokenId);
     }
 
     /**
@@ -183,12 +185,12 @@ contract Voting is IForwarder, AragonApp {
     * @param _executesIfDecided Whether to also immediately execute newly created vote if decided
     * @return voteId id for newly created vote
     */
-    function newVote(bytes _executionScript, string _metadata, bool _castVote, bool _executesIfDecided)
+    function newVote(bytes _executionScript, string _metadata, bool _castVote, bool _executesIfDecided, uint256 _tokenId)
         external
         auth(CREATE_VOTES_ROLE)
         returns (uint256 voteId)
     {
-        return _newVote(_executionScript, _metadata, _castVote, _executesIfDecided);
+        return _newVote(_executionScript, _metadata, _castVote, _executesIfDecided, _tokenId);
     }
 
     /**
@@ -199,9 +201,9 @@ contract Voting is IForwarder, AragonApp {
     * @param _supports Whether voter supports the vote
     * @param _executesIfDecided Whether the vote should execute its action if it becomes decided
     */
-    function vote(uint256 _voteId, bool _supports, bool _executesIfDecided) external voteExists(_voteId) {
+    function vote(uint256 _voteId, bool _supports, bool _executesIfDecided, uint256 _tokenId) external voteExists(_voteId) {
         require(_canVote(_voteId, msg.sender), ERROR_CAN_NOT_VOTE);
-        _vote(_voteId, _supports, msg.sender, _executesIfDecided);
+        _vote(_voteId, _tokenId,  _supports, msg.sender, _executesIfDecided);
     }
 
     /**
@@ -230,9 +232,9 @@ contract Voting is IForwarder, AragonApp {
     * @dev IForwarder interface conformance
     * @param _evmScript Start vote with script
     */
-    function forward(bytes _evmScript) public {
+    function forward(bytes _evmScript, uint256 _tokenId) public {
         require(canForward(msg.sender, _evmScript), ERROR_CAN_NOT_FORWARD);
-        _newVote(_evmScript, "", true, true);
+        _newVote(_evmScript, "", true, true, _tokenId);
     }
 
     /**
@@ -328,7 +330,7 @@ contract Voting is IForwarder, AragonApp {
     * @dev Internal function to create a new vote
     * @return voteId id for newly created vote
     */
-    function _newVote(bytes _executionScript, string _metadata, bool _castVote, bool _executesIfDecided) internal returns (uint256 voteId) {
+    function _newVote(bytes _executionScript, string _metadata, bool _castVote, bool _executesIfDecided, uint256 _tokenId) internal returns (uint256 voteId) {
         uint64 snapshotBlock = getBlockNumber64() - 1; // avoid double voting in this very block
 
         voteId = votesLength++;
@@ -343,18 +345,19 @@ contract Voting is IForwarder, AragonApp {
         emit StartVote(voteId, msg.sender, _metadata);
 
         if (_castVote && _canVote(voteId, msg.sender)) {
-            _vote(voteId, true, msg.sender, _executesIfDecided);
+            _vote(voteId, _tokenId,  true, msg.sender, _executesIfDecided);
         }
     }
 
     /**
     * @dev Internal function to cast a vote. It assumes the queried vote exists.
     */
-    function _vote(uint256 _voteId, bool _supports, address _voter, bool _executesIfDecided) internal {
+    function _vote(uint256 _voteId, uint256 _tokenId, bool _supports, address _voter, bool _executesIfDecided) internal {
         Vote storage vote_ = votes[_voteId];
-
+        require(!hasVoted[_tokenId], "Already voted");
         // This could re-enter, though we can assume the governance token is not malicious
-        uint256 voterStake = NFT.balanceOf(_voter);
+        uint256 voterStake = 1;
+        hasVoted[_tokenId] = true;
         VoterState state = vote_.voters[_voter];
 
         // If voter had previously voted, decrease count
