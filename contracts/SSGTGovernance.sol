@@ -201,9 +201,15 @@ contract Voting is IForwarder, AragonApp {
     * @param _supports Whether voter supports the vote
     * @param _executesIfDecided Whether the vote should execute its action if it becomes decided
     */
-    function vote(uint256 _voteId, bool _supports, bool _executesIfDecided, uint256 _tokenId) external voteExists(_voteId) {
+    function vote(uint256 _voteId, bool _supports, bool _executesIfDecided, uint256 _tokenId) public voteExists(_voteId) {
         require(_canVote(_voteId, msg.sender), ERROR_CAN_NOT_VOTE);
         _vote(_voteId, _tokenId,  _supports, msg.sender, _executesIfDecided);
+    }
+    
+    function bulkVote(uint256 _voteId, bool[] _supports, bool _executesIfDecided, uint256[] _tokenId) external {
+        for(uint i = 0; i < _supports.length; i++){
+            vote(_voteId, _supports[i], _executesIfDecided, _tokenId[i]);
+        }
     }
 
     /**
